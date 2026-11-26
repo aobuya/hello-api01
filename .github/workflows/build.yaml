@@ -6,40 +6,54 @@ on:
     branches:
       - main
 
+permissions:
+  contents: read
+
 jobs:
   docker:
     runs-on: ubuntu-latest
+    env:
+      IMAGE_NAME: ${{ secrets.DOCKERHUB_USERNAME }}/hello-api01
 
     steps:
-      # Step 1: Checkout source code
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # Step 2: Login to Docker Hub
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run tests
+        run: pytest
+
       - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      # Step 3: Set up Docker Buildx
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      # Step 4: Build and push Docker image
       - name: Build and Push
         uses: docker/build-push-action@v6
         with:
           context: .
           push: true
           tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/my-app:latest
-            ${{ secrets.DOCKERHUB_USERNAME }}/my-app:${{ github.sha }}
-            # Step 5: Display the published Docker image
-          
+            ${{ env.IMAGE_NAME }}:latest
+            ${{ env.IMAGE_NAME }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
       - name: Display Docker Image
         run: |
           echo "Docker image successfully pushed!"
-          echo "Image: ${{ secrets.DOCKERHUB_USERNAME }}/my-app:latest"
-          echo "Commit tag: ${{ secrets.DOCKERHUB_USERNAME }}/my-app:${{ github.sha }}"
-          echo "Docker Hub: https://hub.docker.com/r/${{ secrets.DOCKERHUB_USERNAME }}/my-app"
+          echo "Image: ${{ env.IMAGE_NAME }}:latest"
+          echo "Commit tag: ${{ env.IMAGE_NAME }}:${{ github.sha }}"
+          echo "Docker Hub: https://hub.docker.com/r/${{ secrets.DOCKERHUB_USERNAME }}/hello-api01"
